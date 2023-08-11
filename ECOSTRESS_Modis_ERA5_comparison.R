@@ -126,7 +126,7 @@ ERA53 <- ERA52 %>% mutate(day=ymd(ERA52$`ERA5$First_10_Characters <- substr(ERA5
 ERA53%>% glimpse()
 
 
-###1.2.1 temperature to numeric ----
+###1.2.1 ERA5 Temperature to numeric ----
 
 ERA5 <- ERA53%>%
   mutate(Temp = as.numeric(gsub(",", ".", Temp)))
@@ -153,6 +153,7 @@ ERA5 %>% ggplot(mapping = aes(x=day,y=Temp))+
 
 
 ## 1.3 ECOSTRESS LST ----
+
 ###1.31 LST ECOSTRESS  Data  ---- 
 
 
@@ -234,9 +235,25 @@ ECO <- lstC %>%
   ) %>% 
   filter(grepl("11H", Time)) # (12:00:00 - 12:59:59)
 
-ECO %>% glimpse()
-  
-ECO %>% ggplot(mapping = aes(x=Date,y=LST_ECOSTRESS))+
+library(data.table)
+
+ECO10_13 <- lstC %>%
+  select(
+    Category,
+    ID,
+    Latitude,
+    Longitude,
+    Date = day,
+    LST_ECOSTRESS_11 = TempC,
+    Time = godz
+  ) %>% 
+  filter(
+    grepl("11H|12H|13H", Time)
+  )
+
+ECO10_13 %>% glimpse()
+
+ ECO %>% ggplot(mapping = aes(x=Date,y=LST_ECOSTRESS))+
   geom_point()+
   geom_smooth()+
   facet_wrap(~Category)+
@@ -246,8 +263,9 @@ ECO %>% ggplot(mapping = aes(x=Date,y=LST_ECOSTRESS))+
     title = "Temperatura powierzchni mierzona w ciągu dnia na poszczególnych łąkach GRASSAT w Wielkopolsce",
     x = "Data",
     y = "Temperatura (°C)",
-    caption = "Na podstawie danych NASA ECOSTRESS"
+    caption = "Na podstawie danych NASA ECOSTRESS")
 
+ ECO %>% glimpse()
 
     
     ECO_11_all <- ECO %>%
@@ -256,19 +274,48 @@ ECO %>% ggplot(mapping = aes(x=Date,y=LST_ECOSTRESS))+
     ECO_11_all %>% glimpse()
     
     
+    ECO_10_13_all <- ECO10_13 %>%
+      full_join(ECO1, by = c("Category", "Date"))
     
-ECO_11_all%>% ggplot()+
-geom_point(mapping = aes(x=Date,y=LST_ECOSTRESS))+
-geom_smooth(mapping = aes(x=Date,y=LST_ECOSTRESS))+
-geom_point(mapping = aes(x=Date,y=LST_ECOSTRESS_11)+
-geom_smooth(mapping = aes(x=Date,y=LST_ECOSTRESS_11))+
-      facet_wrap(~Category)+
-      theme_minimal()
-
-
+    ECO_11_all %>% glimpse()
+    
+## 1.4 ECOSTRESS ET ----
+    
+###1.31 ET ECOSTRESS  Data  ---- 
+    
+    
+t1 <- ecostress_et
+    
+    t2 <- t1%>% mutate(t1$First_10_Characters <- substr(t1$Date, 1, 10))
+    
+    t2 %>% glimpse()
+    
+    t3 <- t2 %>%
+      mutate(
+        Date = ymd_hms(Date),      
+        Time = format(Date, "%H:%M:%S")  
+      ) %>%
+      select(-Date)
+    
+    t3 %>% glimpse()
+    
+    t <- t3 %>% mutate(day=ymd(t3$'t1$First_10_Characters'))
+    
+    t %>% glimpse()
+    
+    
+    t %>% hms(t$Time)
+    
+    et1<- t %>% mutate(godz=hms(t$Time))
+    
+    et1%>% glimpse() # full success! 
+    
+    
+  
 #2.0 Joining tables ----
 
-##MODIS LST  + MODIS LAI ----
+##2.1 MODIS LST  + MODIS LAI ----
+    
 lst_modis %>% glimpse()
 lai_modis %>% glimpse()
 
@@ -282,7 +329,7 @@ left_join(lai_modis, by = c("Category", "day"))
 modis_full %>% view()
 
 
-## ERA5 ----
+##2.2 ERA5 ----
 ERA5_full <- ERA5 %>%
   left_join(modis_full, by = c("Category", "day"))
 
@@ -326,6 +373,16 @@ ecs <- lstC %>%
   Time=godz
 )
 
+## 2.3 Ecostress LST ----
+
+library(lubridate)
+
+library(dplyr)
+
+library()
+
+ECO10_13 %>% glimpse()
+
 ecs %>% glimpse()
 
 ecs_11 <- ecs %>% 
@@ -342,25 +399,52 @@ All_data_11 <- MODIS_ERA %>%
   left_join(ecs_11, by = c("Category", "Date"))
 
 
-All_data %>% glimpse()
+
+All_data_10_13 <- MODIS_ERA %>%
+  left_join(ECO10_13, by = c("Category", "Date"))
+
+
+All_data_10_13 %>% glimpse()
 
 
 merged_data <- MODIS_ERA %>% 
   left_join(ecs, by = c("Category", "Date"))
 
-merged_data %>% glimpse()
+## 2.4 Ecostress ET data ----
 
-merged_data <- merged_data %>%
-  mutate(LST_ECOSTRESS_TS = LST_ECOSTRESS_TS - 273.15) %>%
+et1 %>% glimpse()
+
+et_data <- et1 %>%
   select(
     Category,
     ID,
     Latitude,
     Longitude,
+    Date=day,
+    ET_ECOSTRESS_canopy=ECO3ETPTJPL_001_EVAPOTRANSPIRATION_PT_JPL_ETcanopy,
+    ET_ECOSTRESS_daily=ECO3ETPTJPL_001_EVAPOTRANSPIRATION_PT_JPL_ETdaily,
+    Time=godz)
+
+et_data %>% glimpse()
+
+merged_data %>% glimpse()
+
+
+#3.0 Tidying data ----
+
+merged_data %>% glimpse()
+
+merged_data <- merged_data %>%
+  mutate(LST_ECOSTRESS_TS = LST_ECOSTRESS_TA - 273.15) %>%
+  select(
+    Category,
+    ID=ID.x,
+    Latitude=Latitude.x,
+    Longitude=Longitude.x,
     Date,
-    ERA5_Ta,
-    LST_MODIS_Ts_day=LST_MODIS_Ts_day,
-    LST_MODIS_Ts_night=LST_MODIS_Ts_day,
+    ERA5_Ta=ERA5,
+    LST_MODIS_Ts_day=LST_MODIS_Ta_day,
+    LST_MODIS_Ts_night=LST_MODIS_Ta_day,
     MODIS_LAI,
     LST_ECOSTRESS_TS=LST_ECOSTRESS_TS,
     Time)
@@ -404,17 +488,18 @@ merged_data <- All_data %>%
   )
 
 
+#4.0 Final results ====
 
 ggplot(merged_data_11, aes(x = Date)) +
-  geom_smooth(aes(y = LST_MODIS_Ta_day, color = "LST_MODIS_Ta_day")) +
-  geom_smooth(aes(y = LST_ECOSTRESS_TA, color = "LST_ECOSTRESS_TA")) +
+  geom_smooth(aes(y = LST_MODIS_Ts_day, color = "LST_MODIS_Ts_day")) +
+  geom_point(aes(y = LST_ECOSTRESS_TS, color = "LST_ECOSTRESS_TS"))+
   geom_smooth(aes(y = ERA5, color = "ERA5"))+
   theme_minimal()+
   facet_wrap(~Category)+
-  labs(title = "Porównanie Temperatur Modis, ECOSTRESS i ERA5 dla obszaru GRASSAT ", x = "Data", y = "Temperatura (°C)", color="Sensor")+
+  labs(title = "Porównanie Temperatur Modis, ECOSTRESS (tylko o godzinie 11:00 - 11:59) i ERA5 dla obszaru GRASSAT ", x = "Data", y = "Temperatura (°C)", color="Sensor")+
   theme_minimal()
 
-merged_data %>% view()
+merged_data_11 %>% glimpse()
 
 merged_data %>% glimpse()
 
@@ -425,9 +510,82 @@ ggplot(merged_data, aes(x = Date)) +
   geom_smooth(aes(y = ERA5_Ta, color = "ERA5_Ta"))+
   theme_minimal()+
   facet_wrap(~Category)+
-  labs(title = "Porownanie Temperatur Modis, ECOSTRESS i ERA5 dla obszaru GRASSAT ", x = "Data", y = "Temperatura (°C)", color="Sensor")+
+  labs(title = "Porownanie Temperatur Modis, ECOSTRESS i ERA5 dla obszaru GRASSAT ",x = "Data",y = "Temperatura (°C)",color="Sensor")+
   theme_minimal()+
   scale_y_continuous(limits = c(-20, 40))
 
+
 merged_data %>% view()
+
+getwd()
+
+write.csv2(merged_data, file="Temperatur(MODIS_ECOSTRESS_ERA5.csv")
+
+#5.0 Vegetation periods ---- 
+
+merged_data %>% glimpse()
+
+
+
+# 1 Swath in 2022
+period_1 <- merged_data %>%
+  filter(between(Date, as.Date("2022-01-01"), as.Date("2022-05-31")))
+
+
+ggplot(period_1, aes(x = Date)) +
+  geom_smooth(aes(y = LST_MODIS_Ts_day, color = "LST_MODIS_Ts_day")) +
+  geom_smooth(aes(y = LST_ECOSTRESS_TS, color = "LST_ECOSTRESS_TS")) +
+  geom_point(aes(y = LST_ECOSTRESS_TS, color = "LST_ECOSTRESS_TS"))+
+  geom_smooth(aes(y = ERA5_Ta, color = "ERA5_Ta"))+
+  theme_minimal()+
+  facet_wrap(~Category)+
+  labs(title = "Porownanie Temperatur Modis, ECOSTRESS i ERA5 dla pierwszego pokosu w 2022r. (1.01.2022-31.05.2022) ",x = "Data",y = "Temperatura (°C)",color="Sensor")+
+  theme_minimal()+
+  scale_y_continuous(limits = c(-20, 40))
+
+# 2 Swath in 2022 
+period_1_a <- merged_data %>%
+  filter(between(Date, as.Date("2022-06-01"), as.Date("2022-06-30")))
+
+
+ggplot(period_1_a, aes(x = Date)) +
+  geom_smooth(aes(y = LST_MODIS_Ts_day, color = "LST_MODIS_Ts_day")) +
+  geom_smooth(aes(y = LST_ECOSTRESS_TS, color = "LST_ECOSTRESS_TS")) +
+  geom_point(aes(y = LST_ECOSTRESS_TS, color = "LST_ECOSTRESS_TS"))+
+  geom_smooth(aes(y = ERA5_Ta, color = "ERA5_Ta"))+
+  theme_minimal()+
+  facet_wrap(~Category)+
+  labs(title = "Porownanie Temperatur Modis, ECOSTRESS i ERA5 dla drugiego pokosu w 2022r. (1.06.2022-30.06.2022) ",x = "Data",y = "Temperatura (°C)",color="Sensor")+
+  theme_minimal()+
+  scale_y_continuous(limits = c(-20, 40))
+
+# 3 Swath in 2022
+period_1_b <- merged_data %>%
+  filter(between(Date, as.Date("2022-07-01"), as.Date("2022-12-31")))
+
+ggplot(period_1_b, aes(x = Date)) +
+  geom_smooth(aes(y = LST_MODIS_Ts_day, color = "LST_MODIS_Ts_day")) +
+  geom_smooth(aes(y = LST_ECOSTRESS_TS, color = "LST_ECOSTRESS_TS")) +
+  geom_point(aes(y = LST_ECOSTRESS_TS, color = "LST_ECOSTRESS_TS"))+
+  geom_smooth(aes(y = ERA5_Ta, color = "ERA5_Ta"))+
+  theme_minimal()+
+  facet_wrap(~Category)+
+  labs(title = "Porownanie Temperatur Modis, ECOSTRESS i ERA5 dla trzeciego pokosu w 2022r. (1.07.2022-31.12.2022) ",x = "Data",y = "Temperatura (°C)",color="Sensor")+
+  theme_minimal()+
+  scale_y_continuous(limits = c(-20, 40))+
+scale_x_date(
+    date_breaks = "1 month",  # Podział co 1 miesiąc
+    date_labels = "%b"        # Format etykiet miesięcy
+  )
+
+
+#6.0  Statistics ----
+
+merged_data %>% glimpse()
+
+cleaned_data <- merged_data %>%
+  filter(LST_ECOSTRESS_TS >= -25) %>% 
+  filter(LST_ECOSTRESS_TS <= 50)
+
+summary(cleaned_data[, c("ERA5_Ta", "LST_MODIS_Ts_day", "LST_ECOSTRESS_TS")])
 
