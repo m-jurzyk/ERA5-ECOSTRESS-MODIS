@@ -1,15 +1,42 @@
+#0.0 About the script ----
+
+#In this project I will compare data from NASA sensors: Modis and ECOSTRESS and from ECMWF: ERA5.
+
+#Comparison of temperature data from NASA sensors: ECOSTRESS, MODIS and ECMWF: ERA5
+#in the area of meadow development under the GRASSAT programme
+#Prepared by: MSc. Eng. Maciej Jurzyk, Institute of Geodesy and Cartography, August 2023
+#Data: Temperature data obtained for the points was used to perform the analysis
+#located in a random location at the Meadow measurement stations of the program
+#GRASSAT. Instrument data used:
+#  - Ts (surface temperature) NASA ECOSTRESS with a spatial resolution of 70m.
+#The instrument is located on the International Space Station ISS and takes measurements in various
+#hours during the day.
+#- Ts (surface temperature) MODIS Terra, a satellite in a heliocentric orbit.
+#A measurement with a spatial resolution of 1000 m was obtained, measurement around 11:00
+#- Ta (atmospheric temperature at 2m height) from ERA5 Satellite with 11km spatial resolution
+
 #1.0 R Environment ----
 
 library(dplyr)
 library(tidyverse)
 library(lubridate)
 
+#All data from Appears by nasa 
+
+
 modis_lst <- read.csv("/Users/maciejjurzyk/Downloads/GRASSAT-Calosc-MOD11A1-061-results.csv")
 modis_lai <- read.csv("/Users/maciejjurzyk/Downloads/GRASSAT-Calosc-MCD15A2H-061-results.csv")
 ecostress_lst <- read.csv("/Users/maciejjurzyk/Downloads/GRASSAT-Calosc-ECO2LSTE-001-results.csv")
 ecostress_et <- read.csv("/Users/maciejjurzyk/Downloads/GRASSAT-Calosc-ECO3ETPTJPL-001-results.csv")
 
+
+#To start working on the tables, we need to do some cleaning and reformatting
+
+# Let's start with - 
+
 ###1.1 MODIS ---- 
+
+# Date and Time format - Time is not necessary for that table and can cause minor problems
 
 e2 <- modis_lst
 e3 <- e2%>% mutate(e2$First_10_Characters <- substr(e2$Date, 1, 10))
@@ -83,8 +110,7 @@ e6 <- e5 %>%
 
 e6 %>% glimpse()
 
-
-
+# Let's present some graphs 
 
 #### 1.1.4 GGPLOT----
 
@@ -223,6 +249,8 @@ ECO1 <- lstC %>%
 
 ECO %>% glimpse()
 
+# Filtering data 
+
 ECO <- lstC %>%
   select(
     Category,
@@ -236,6 +264,8 @@ ECO <- lstC %>%
   filter(grepl("11H", Time)) # (12:00:00 - 12:59:59)
 
 library(data.table)
+
+# More filtering 
 
 ECO10_13 <- lstC %>%
   select(
@@ -519,6 +549,8 @@ merged_data %>% view()
 
 getwd()
 
+#4.1 Final normalized  table 
+
 write.csv2(merged_data, file="Temperatur(MODIS_ECOSTRESS_ERA5.csv")
 
 #5.0 Vegetation periods ---- 
@@ -527,7 +559,7 @@ merged_data %>% glimpse()
 
 
 
-# 1 Swath in 2022
+# 5.1 First Swath in 2022 ----
 period_1 <- merged_data %>%
   filter(between(Date, as.Date("2022-01-01"), as.Date("2022-05-31")))
 
