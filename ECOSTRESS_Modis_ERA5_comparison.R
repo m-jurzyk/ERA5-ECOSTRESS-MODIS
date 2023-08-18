@@ -769,7 +769,7 @@ ggplot(combined_data, aes(x = DOY, y = skumulowany_ERA5, color = factor(year))) 
 selected_categories <- c("Brody 1")
 filtered_data <- combined_data %>% filter(Category %in% selected_categories)
 
-# GGPLOT 
+# GGPLOT MODIS 
 
 ggplot(filtered_data, aes(x = DOY, y = skumulowany_MODIS,color = factor(year))) +
   geom_smooth() +
@@ -781,6 +781,153 @@ ggplot(filtered_data, aes(x = DOY, y = skumulowany_MODIS,color = factor(year))) 
   scale_x_continuous(breaks = seq(1, max(filtered_data$DOY), by = 50)) + 
   facet_grid(~Category)+
   theme_minimal()
+
+# GGPLOT ERA5
+
+ggplot(filtered_data, aes(x = DOY, y = skumulowany_ERA5,color = factor(year))) +
+  geom_smooth() +
+  labs(title = "Skumulowana temperatura w poszczegolnych latach na polach pomiarowych GRASSAT",
+       x = "Dzien roku",
+       y = "Skumulowana temperatura",
+       caption= "Na podstawie danych MODIS") +
+  scale_color_discrete(name = "Rok") +
+  scale_x_continuous(breaks = seq(1, max(filtered_data$DOY), by = 50)) + 
+  facet_grid(~Category)+
+  theme_minimal()
+
+# combined_data final CSV
+
+# 8.0  Cumulative ts_ta ----
+
+merged_data %>% view()
+
+##8.1 2020 ---- 
+
+TS_TA2020 <- merged_data   %>%
+  group_by(Category, year = lubridate::year(Date)) %>% 
+  ungroup() %>% 
+  filter(year==2020)
+
+
+TS_TA2020_1 <- TS_TA2020 %>%
+  mutate(ts_ta= LST_MODIS_Ts_day - ERA5_Ta)
+
+
+TS_TA2020_2 <- TS_TA2020_1  %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_TS_TA = cumsum(ifelse(is.na(ts_ta), 0, ts_ta))) %>%
+  ungroup()
+
+TS_TA2020_2 %>% glimpse()
+
+
+##8.2 2021 ---- 
+
+TS_TA2021 <- merged_data   %>%
+  group_by(Category, year = lubridate::year(Date)) %>% 
+  ungroup() %>% 
+  filter(year==2021)
+
+
+TS_TA2021_1 <- TS_TA2021 %>%
+  mutate(ts_ta= LST_MODIS_Ts_day - ERA5_Ta)
+
+
+TS_TA2021_2 <- TS_TA2021_1  %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_TS_TA = cumsum(ifelse(is.na(ts_ta), 0, ts_ta))) %>%
+  ungroup()
+
+##8.3 2022 ---- 
+
+TS_TA2022 <- merged_data   %>%
+  group_by(Category, year = lubridate::year(Date)) %>% 
+  ungroup() %>% 
+  filter(year==2022)
+
+
+TS_TA2022_1 <- TS_TA2022 %>%
+  mutate(ts_ta= LST_MODIS_Ts_day - ERA5_Ta)
+
+
+TS_TA2022_2 <- TS_TA2022_1  %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_TS_TA = cumsum(ifelse(is.na(ts_ta), 0, ts_ta))) %>%
+  ungroup()
+
+
+TS_TA2022_2 %>% view()
+
+
+##8.4 GGPLOT ---- 
+
+
+ggplot(TS_TA2022_2, aes(x = Date)) +
+  geom_smooth(aes(y = skumulowany_TS_TA, color = "skumulowany_TS_TA")) +
+  labs(title = "Wzrost skumulowanych ts_ta",
+       x = "Data",
+       y = "Wartość skumulowana") +
+  facet_wrap(~Category)+
+  theme_minimal()
+
+
+## 8.5 Creating one graph - Adding DOY, day, month colun, rbinding 3 tables into 1 ----
+
+
+doy_tsta2020  <- TS_TA2022_2 %>%
+  mutate(month = month(Date), day = day(Date), DOY = yday(Date))
+
+doy_tsta2021 <- TS_TA2021_2 %>%
+  mutate(month = month(Date), day = day(Date), DOY = yday(Date))
+
+doy_tsta2022 <- TS_TA2020_2 %>%
+  mutate(month = month(Date), day = day(Date), DOY = yday(Date))
+
+combinedtsta_data <- rbind(doy_tsta2022, doy_tsta2021, doy_tsta2020)
+
+combinedtsta_data %>% view()
+
+
+### 8.5.1 GGPLOT ----
+
+
+ggplot(combinedtsta_data, aes(x = DOY, y = skumulowany_TS_TA, color = factor(year))) +
+  geom_smooth() +
+  labs(title = "Skumulowany TS-TA w poszczególnych latach",
+       x = "Numer dnia w roku (DOY)",
+       y = "Skumulowana temperatura") +
+  scale_color_discrete(name = "Rok") +
+  scale_x_continuous(breaks = seq(1, max(combined_data$DOY), by = 14)) + 
+  facet_grid(~Category)+
+  theme_minimal()
+
+## Done! 
+
+### 8.5.2 Selecting only specific categories e.g (G1 i G2) ----
+
+selected_categories <- c("Brody 1", "Kaczmarek 1")
+filtered_datatsta <- combinedtsta_data %>% filter(Category %in% selected_categories)
+
+
+
+# GGPLOT MODIS 
+
+ggplot(filtered_datatsta, aes(x = DOY, y = skumulowany_TS_TA,color = factor(year))) +
+  geom_smooth() +
+  labs(title = "Skumulowany TS-TA w poszczegolnych latach na polach pomiarowych GRASSAT",
+       x = "Dzien roku",
+       y = "Skumulowana TS_TA",
+       caption= "Na podstawie danych MODIS i ERA5") +
+  scale_color_discrete(name = "Rok") +
+  scale_x_continuous(breaks = seq(1, max(filtered_data$DOY), by = 50)) + 
+  facet_grid(~Category)+
+  theme_minimal()
+
+
+# combinedtsta_data - final table
 
 
 
