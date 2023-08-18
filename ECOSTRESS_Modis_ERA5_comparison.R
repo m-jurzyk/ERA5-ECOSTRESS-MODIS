@@ -621,3 +621,168 @@ cleaned_data <- merged_data %>%
 
 summary(cleaned_data[, c("ERA5_Ta", "LST_MODIS_Ts_day", "LST_ECOSTRESS_TS")])
 
+
+
+cleaned_data %>%  glimpse()
+
+
+
+# 7.0  Cumulative temperature sum----
+
+merged_data %>% view()
+
+##7.1 2020 ---- 
+
+sum_data2020 <- merged_data   %>%
+  group_by(Category, year = lubridate::year(Date)) %>% 
+  ungroup() %>% 
+  filter(year==2020)
+
+sum_data2020 %>% glimpse()
+
+sum_data2020_1 <- sum_data2020 %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_ERA5 = cumsum(ERA5_Ta)) %>%
+  ungroup()
+
+
+sum_data_2020_2 <- sum_data2020_1  %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_MODIS = cumsum(ifelse(is.na(LST_MODIS_Ts_day), 0, LST_MODIS_Ts_day))) %>%
+  ungroup()
+
+
+sum_data_2020_2 %>% glimpse()
+
+
+##7.2 2021 ---- 
+
+sum_data2021 <- merged_data  %>%
+  group_by(Category, year = lubridate::year(Date)) %>% 
+  ungroup() %>% 
+  filter(year==2021)
+
+sum_data2021 %>% glimpse()
+
+sum_data2021_1 <- sum_data2021 %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_ERA5 = cumsum(ERA5_Ta)) %>%
+  ungroup()
+
+
+sum_data_2021_2 <- sum_data2021_1  %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_MODIS = cumsum(ifelse(is.na(LST_MODIS_Ts_day), 0, LST_MODIS_Ts_day))) %>%
+  ungroup()
+
+
+sum_data_2021_2 %>% glimpse()
+
+##7.3 2022 ---- 
+
+sum_data2022 <- merged_data  %>%
+  group_by(Category, year = lubridate::year(Date)) %>% 
+  ungroup() %>% 
+  filter(year==2022)
+
+sum_data2022 %>% glimpse()
+
+sum_data2022_1 <- sum_data2022 %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_ERA5 = cumsum(ERA5_Ta)) %>%
+  ungroup()
+
+
+sum_data_2022_2 <- sum_data2022_1  %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_MODIS = cumsum(ifelse(is.na(LST_MODIS_Ts_day), 0, LST_MODIS_Ts_day))) %>%
+  ungroup()
+
+
+### 7.3.1 ECOSTRESS Data - dosen't make any sense :/ ----
+sum_data_2022_3 <- sum_data_2022_2  %>%
+  arrange(Category, Date) %>%
+  group_by(Category, year = lubridate::year(Date)) %>%
+  mutate(skumulowany_ECOSTRESS = cumsum(ifelse(is.na(LST_ECOSTRESS_TS), 0, LST_ECOSTRESS_TS))) %>%
+  ungroup()
+
+
+sum_data_2022_3 %>% view()
+
+
+##7.4 GGPLOT ---- 
+
+
+ggplot(sum_data_2022_2, aes(x = Date)) +
+  geom_smooth(aes(y = skumulowany_ERA5, color = "skumulowany_ERA5")) +
+  geom_smooth(aes(y = skumulowany_MODIS, color = "skumulowany_MODIS")) +
+  labs(title = "Wzrost skumulowanych temperatur",
+       x = "Data",
+       y = "Wartość skumulowana") +
+  scale_color_manual(values = c("skumulowany_ERA5" = "blue", "skumulowany_MODIS" = "red")) +
+  facet_wrap(~Category)+
+  theme_minimal()
+
+sum_data_2022_2 %>% glimpse()
+
+
+## 7.5 Creating one graph - Adding DOY, day, month colun, rbinding 3 tables into 1 ----
+
+
+doy_data2020  <- sum_data_2020_2 %>%
+  mutate(month = month(Date), day = day(Date), DOY = yday(Date))
+
+doy_data2021 <- sum_data_2021_2 %>%
+  mutate(month = month(Date), day = day(Date), DOY = yday(Date))
+
+doy_data2022 <- sum_data_2022_2 %>%
+  mutate(month = month(Date), day = day(Date), DOY = yday(Date))
+
+combined_data <- rbind(doy_data2020, doy_data2021, doy_data2022)
+
+combined_data %>% view()
+
+
+### 7.5.1 GGPLOT ----
+
+
+ggplot(combined_data, aes(x = DOY, y = skumulowany_ERA5, color = factor(year))) +
+  geom_smooth() +
+  labs(title = "Skumulowana temperatura w poszczególnych latach",
+       x = "Numer dnia w roku (DOY)",
+       y = "Skumulowana temperatura") +
+  scale_color_discrete(name = "Rok") +
+  scale_x_continuous(breaks = seq(1, max(combined_data$DOY), by = 14)) + 
+  facet_grid(~Category)+
+  theme_minimal()
+
+## Done! 
+
+### 7.5.2 Selecting only specific categories e.g (G1 i G2) ----
+
+selected_categories <- c("Brody 1")
+filtered_data <- combined_data %>% filter(Category %in% selected_categories)
+
+# GGPLOT 
+
+ggplot(filtered_data, aes(x = DOY, y = skumulowany_MODIS,color = factor(year))) +
+  geom_smooth() +
+  labs(title = "Skumulowana temperatura w poszczegolnych latach na polach pomiarowych GRASSAT",
+       x = "Dzien roku",
+       y = "Skumulowana temperatura",
+       caption= "Na podstawie danych MODIS") +
+  scale_color_discrete(name = "Rok") +
+  scale_x_continuous(breaks = seq(1, max(filtered_data$DOY), by = 50)) + 
+  facet_grid(~Category)+
+  theme_minimal()
+
+
+
+
+
