@@ -766,7 +766,7 @@ ggplot(combined_data, aes(x = DOY, y = skumulowany_ERA5, color = factor(year))) 
 
 ### 7.5.2 Selecting only specific categories e.g (G1 i G2) ----
 
-selected_categories <- c("Brody 1")
+selected_categories <- c("Brody 1", "Kaczmarek 1", "T 1")
 filtered_data <- combined_data %>% filter(Category %in% selected_categories)
 
 # GGPLOT MODIS 
@@ -779,6 +779,7 @@ ggplot(filtered_data, aes(x = DOY, y = skumulowany_MODIS,color = factor(year))) 
        caption= "Na podstawie danych MODIS") +
   scale_color_discrete(name = "Rok") +
   scale_x_continuous(breaks = seq(1, max(filtered_data$DOY), by = 50)) + 
+  scale_y_continuous(limits = c(0, 5000)) +
   facet_grid(~Category)+
   theme_minimal()
 
@@ -792,6 +793,7 @@ ggplot(filtered_data, aes(x = DOY, y = skumulowany_ERA5,color = factor(year))) +
        caption= "Na podstawie danych MODIS") +
   scale_color_discrete(name = "Rok") +
   scale_x_continuous(breaks = seq(1, max(filtered_data$DOY), by = 50)) + 
+  scale_y_continuous(limits = c(0, 5000)) +
   facet_grid(~Category)+
   theme_minimal()
 
